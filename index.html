@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 学习智能体 · 人工智能通识课</title>
+<meta name="description" content="下一代 AI 学习智能体：左边是课程，右边是陪你学的助手。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<a class="skip-link" href="#app-main">跳到主要内容</a>
+<div id="app" class="app">
+  <header class="app-header" id="app-header"></header>
+  <div class="app-body">
+    <div class="app-main" id="app-main" tabindex="-1"></div>
+    <aside class="assistant" id="assistant" aria-label="学习助手"></aside>
+  </div>
+  <button class="assistant-fab" id="assistant-fab" type="button" aria-label="打开学习助手">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path></svg>
+    <span>学习助手</span>
+  </button>
+</div>
+<div class="sel-ask" id="sel-ask" hidden>
+  <button type="button" id="sel-ask-btn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"></path></svg>
+    问助手
+  </button>
+</div>
+<div class="toast-host" id="toast-host" aria-live="polite"></div>
+
+<script src="assets/js/core.js"></script>
+<script src="assets/video/clips.js"></script>
+<script src="assets/js/course.js"></script>
+<script src="assets/js/widgets/ch1.js"></script>
+<script src="assets/js/widgets/ch2.js"></script>
+<script src="assets/js/widgets/ch3.js"></script>
+<script src="assets/js/widgets/ch4.js"></script>
+<script src="assets/js/widgets/ch5.js"></script>
+<script src="assets/js/assistant.js"></script>
+<script src="assets/js/pages.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

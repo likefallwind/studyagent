@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>课程视频片段</title>
+<link rel="stylesheet" href="../lib/base.css">
+<link rel="stylesheet" href="css/page.css">
+<style>
+  /* 片段播放器：只构建一个场景，播放它自己的那段旁白。用法：player.html?render&clip=<id>
+     （render 让引擎不挂它自带的整片播放控件） */
+  :root { --sans: "Noto Sans CJK SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  html, body { background: #0c1322; }
+  #prog, #brand, #hdr { display: none; }
+  #sub { font-size: 46px; transition: bottom .25s; }
+  body.idle #sub { visibility: hidden; }
+  body.hover #sub, body:not(.playing) #sub { bottom: 150px; }   /* 给控制条让位 */
+  body.small #sub { font-size: 72px; }                          /* 手机上画面很小，字幕要放大才看得清 */
+  #stage { cursor: pointer; }
+
+  #big { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    border: 0; background: radial-gradient(circle at center, rgba(6, 10, 22, .35), rgba(6, 10, 22, .7)); color: #fff; font: 500 14px var(--sans); cursor: pointer; }
+  #big .ring { width: 68px; height: 68px; border-radius: 50%; background: #ffe066; color: #0c1322; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 30px rgba(0, 0, 0, .45); transition: transform .2s; }
+  #big:hover .ring, #big:focus-visible .ring { transform: scale(1.08); }
+  body:not(.idle):not(.ended) #big { display: none; }
+
+  #bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 10px; padding: 18px 12px 8px;
+    background: linear-gradient(transparent, rgba(6, 10, 22, .85)); color: #dfe6fb; font: 12px var(--sans); transition: opacity .25s; }
+  body.playing:not(.hover) #bar { opacity: 0; }
+  body.idle #bar { opacity: 0; pointer-events: none; }
+  #bar button { min-width: 32px; height: 28px; border: 0; border-radius: 6px; background: rgba(255, 255, 255, .12); color: #fff; font: 600 12px var(--sans); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; }
+  #bar button:hover { background: rgba(255, 255, 255, .22); }
+  #rng { flex: 1; accent-color: #ffe066; min-width: 0; }
+  #clock { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #ffe066; outline-offset: 2px; }
+</style>
+</head>
+<body class="idle">
+<div id="stage">
+  <svg id="svg" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div id="layer"></div>
+  <div id="prog"></div>
+  <div id="hdr"><span id="hno"></span><span id="hname"></span></div>
+  <div id="brand"></div>
+  <div id="sub"></div>
+</div>
+<button id="big" type="button" aria-label="播放"><span class="ring"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg></span><span id="big-t"></span></button>
+<div id="bar">
+  <button id="play" type="button" aria-label="播放">▶</button>
+  <input id="rng" type="range" min="0" step="0.01" value="0" aria-label="进度">
+  <span id="clock"></span>
+  <button id="speed" type="button" aria-label="播放速度">1×</button>
+  <button id="full" type="button" aria-label="全屏">⛶</button>
+</div>
+<script src="timeline.js"></script>
+<script src="../clips.js"></script>
+<script src="js/tiger_patch.js"></script>
+<script src="../lib/engine.js"></script>
+<script>
+  const CLIP_ID = new URLSearchParams(location.search).get('clip');
+  const CLIP = window.SA.clips[CLIP_ID];
+  // 只构建这个片段的场景；其余场景的代码照常加载，但不会建出画面
+  const registerScene = scene;
+  scene = (id, build) => { if (id === CLIP.scene) registerScene(id, build); };
+</script>
+<script src="js/kit.js"></script>
+<script src="js/part1.js"></script>
+<script src="js/part2.js"></script>
+<script src="js/part3.js"></script>
+<script src="js/part4.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const body = document.body, stage = $('stage'), big = $('big'), btn = $('play'), rng = $('rng'), clock = $('clock'), speed = $('speed');
+  const audio = new Audio('clips/' + CLIP_ID + '.mp3');
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const tell = (ev, extra) => parent !== window && parent.postMessage(Object.assign({ sa: 'video', clip: CLIP_ID, ev }, extra), '*');
+  rng.max = CLIP.dur;
+  $('big-t').textContent = fmt(CLIP.dur);
+
+  const fit = () => { const k = Math.min(innerWidth / 1920, innerHeight / 1080); stage.style.transform = `scale(${k})`; stage.style.left = (innerWidth - 1920 * k) / 2 + 'px'; stage.style.top = (innerHeight - 1080 * k) / 2 + 'px'; body.classList.toggle('small', k < 0.3); };
+  addEventListener('resize', fit); fit();
+
+  let line = -1;
+  function show(rel) {
+    seek(CLIP.t0 + rel);
+    rng.value = rel;
+    clock.textContent = `${fmt(rel)} / ${fmt(CLIP.dur)}`;
+    let i = -1;
+    CLIP.lines.forEach((l, k) => { if (rel >= l.start - 0.15) i = k; });
+    if (i !== line) { line = i; if (!body.classList.contains('idle')) tell('line', { line: i }); }
+  }
+  function play() {
+    if (audio.ended || audio.currentTime >= CLIP.dur - 0.05) audio.currentTime = 0;
+    body.classList.remove('idle', 'ended');
+    audio.play().catch(() => body.classList.add('idle'));   // 浏览器拦下了自动播放：退回海报，等用户点
+  }
+  const toggle = () => (audio.paused ? play() : audio.pause());
+
+  audio.addEventListener('play', () => { body.classList.add('playing'); btn.textContent = '❚❚'; btn.setAttribute('aria-label', '暂停'); tell('play'); });
+  audio.addEventListener('pause', () => { body.classList.remove('playing'); btn.textContent = '▶'; btn.setAttribute('aria-label', '播放'); if (!audio.ended) tell('pause'); });
+  audio.addEventListener('ended', () => { body.classList.add('ended'); big.setAttribute('aria-label', '重播'); $('big-t').textContent = '重播'; show(CLIP.dur); tell('ended'); });
+
+  big.addEventListener('click', play);
+  btn.addEventListener('click', toggle);
+  stage.addEventListener('click', toggle);
+  rng.addEventListener('input', () => { audio.currentTime = +rng.value; show(+rng.value); });
+  const rates = [1, 1.25, 1.5];
+  speed.addEventListener('click', () => { audio.playbackRate = rates[(rates.indexOf(audio.playbackRate) + 1) % rates.length]; speed.textContent = audio.playbackRate + '×'; });
+  $('full').addEventListener('click', () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()));
+  let hideT = null;
+  addEventListener('pointermove', () => { body.classList.add('hover'); clearTimeout(hideT); hideT = setTimeout(() => body.classList.remove('hover'), 1800); });
+  addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.key === 'k') { e.preventDefault(); toggle(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { audio.currentTime = Math.max(0, Math.min(CLIP.dur, audio.currentTime + (e.key === 'ArrowLeft' ? -5 : 5))); show(audio.currentTime); }
+  });
+  // 课程页可以让片段跳到某一句（文字稿）或暂停（另一个视频开始播放时）
+  addEventListener('message', (e) => {
+    const m = e.data || {};
+    if (m.cmd === 'seek') { audio.currentTime = m.t; show(m.t); if (m.play) play(); }
+    else if (m.cmd === 'pause') audio.pause();
+  });
+
+  // 等场景里的图片解码完再开始，海报帧取片段末尾（画面已经完整）
+  Promise.all([...document.images].map((i) => i.decode().catch(() => {}))).then(() => {
+    start();
+    document.fonts.ready.then(() => {
+      show(CLIP.poster - CLIP.t0);
+      (function loop() {
+        if (!audio.paused) show(Math.min(audio.currentTime, CLIP.dur));
+        requestAnimationFrame(loop);
+      })();
+    });
+  });
+})();
+</script>
+</body>
+</html>
